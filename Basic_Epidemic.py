@@ -254,52 +254,57 @@ class data_analysis(object):
     def binomial(self, i):
         
         if self.j ==0:
-            
-            change_in_suseptible = min(0,self.suseptible_data[i] - self.suseptible_data[i+1])
         
-            chance_of_occourance = stats.binom.pmf(change_in_suseptible, self.suseptible_data[i], 1 - math.e**(-self.time_step*self.guess[0]*self.infected_data[i]))
+            change_in_suseptible = self.suseptible_data[i] - self.suseptible_data[i+1]
+        
+            chance_of_occourance = stats.binom.pmf(change_in_suseptible, self.suseptible_data[i], 1 - math.e**(-self.time_step*self.guess[0]*self.infected_data[i]/(self.suseptible_data[0] + self.infected_data[0])))
+            
         else:
             change_in_recovered = self.recovered_data[i+1] - self.recovered_data[i]
         
             chance_of_occourance = stats.binom.pmf(change_in_recovered, self.infected_data[i], 1 - math.e**(-self.time_step*self.guess[1]))
-        return 10*chance_of_occourance
+        return chance_of_occourance
     def likihood(self):
         
         likihood = self.scale
         for i in range(len(self.suseptible_data) - 1):
             likihood = likihood*self.binomial(i)
+
         return -likihood
 def scipy_mediator(guess, other_data):  
     error = data_analysis(other_data[0], other_data[1], other_data[2], guess, other_data[3], other_data[4], other_data[5], other_data[6])
     return error.likihood()
 #def initial_guess():
 def initial_guess(base_suseptible, base_infected, base_recovered, time_step, itterations):
-    minimum_1 = 00000
+    population = base_infected[0] + base_infected[0] + base_suseptible[0]
     guess = [0,0,0]
+    minimum_1 = 00000
     bound = [(0,20)]
     best_guess_1 = 0
-    for i in range(1,20):
-       probability = -scipy_mediator([i,0,0], [base_suseptible, base_infected, base_recovered,time_step,itterations, 0, 1])
-       
-       if probability > minimum_1:
-           minimum_1 = probability
-           best_guess_1 = i
-    
+    for i in range(0,20):
+      probability = -scipy_mediator([i,0,0], [base_suseptible, base_infected, base_recovered,time_step,itterations, 0, 1])
+      
+      if probability > minimum_1:
+          minimum_1 = probability
+          best_guess_1 = i
+   
     temp_guess_1 = 0
     minimum_1 = 0
     for j in range(-10,10):
-       probability = -scipy_mediator([best_guess_1 + j/10, 0,0], [base_suseptible, base_infected, base_recovered,time_step,itterations, 0, 1])
-       
-       if probability > minimum_1:
-           minimum_1 = probability
-           temp_guess_1 = j
+      probability = -scipy_mediator( [best_guess_1+ j/(10),0,0], [base_suseptible, base_infected, base_recovered,time_step,itterations, 0, 1])
+
+      if probability > minimum_1:
+          minimum_1 = probability
+          temp_guess_2 = j
     
-    inverse_scale = -scipy_mediator([best_guess_1 + temp_guess_1/10, 0,0], [base_suseptible, base_infected, base_recovered,time_step,itterations, 0, 1])
+    inverse_scale = -scipy_mediator([temp_guess_1/(10) + best_guess_1,0,0], [base_suseptible, base_infected, base_recovered,time_step,itterations, 0, 1])
     if inverse_scale == 0:
-        scale = 1
+       scale = 1
     else:
-        scale = 1/inverse_scale
-    guess[0] = scipy.optimize.minimize(scipy_mediator,[temp_guess_1/10 + best_guess_1], [base_suseptible, base_infected, base_recovered,time_step,itterations,0, scale], bounds=bound, method='SLSQP', tol = 0.0000000000000000000000001)
+       scale = 1/inverse_scale
+    print(scale)
+    guess[0] = scipy.optimize.minimize(scipy_mediator,[temp_guess_1/(10) + best_guess_1,0,0], [base_suseptible, base_infected, base_recovered,time_step,itterations,0, scale], bounds=bound, method='SLSQP', tol = 0.0000000000000000000000001)
+    
     minimum_2 = 00000
     bound = [(0,20)]
     best_guess_2 = 0
@@ -327,23 +332,23 @@ def initial_guess(base_suseptible, base_infected, base_recovered, time_step, itt
     guess[1] = scipy.optimize.minimize(scipy_mediator,[0,temp_guess_2/10 + best_guess_2,0], [base_suseptible, base_infected, base_recovered,time_step,itterations,1, scale], bounds=bound, method='SLSQP', tol = 0.0000000000000000000000001)
     
     
-    return [guess[0].x[0], guess[1].x[1]]
+    return [guess[0].x[0]/population, guess[1].x[1]]
 
 def main(itterations):
-    population = 26
-    infection_rate = 3
-    recovery_rate = 10
-    time_step = 0.00022
+    population = 70000000
+    infection_rate = 20/(population)
+    recovery_rate = 14
+    time_step =0.0002
     
     resuseptibility_rate = 00
     suseptible = np.ones(1)
     infected = np.ones(1)
     recovered = np.ones(1)
-    
-    suseptible = population*suseptible
-    infected =  infected
-    recovered = 0*population*recovered
-    
+    infected_number = 10
+    recovered_number = 0
+    infected =  infected_number*infected
+    recovered = recovered_number*population*recovered
+    suseptible = (population - infected_number - recovered_number)*suseptible
 
     
     #print(suseptible_data)
@@ -351,8 +356,8 @@ def main(itterations):
     
    
 
-    #random_progress = simulation(suseptible, infected, recovered, population, infection_rate, recovery_rate, time_step, itterations, resuseptibility_rate, 0)
-    #base_suseptible, base_infected, base_recovered, time = random_progress.Random_SIRS()
+    random_progress = simulation(suseptible, infected, recovered, population, infection_rate, recovery_rate, time_step, itterations, resuseptibility_rate, 0)
+    base_suseptible, base_infected, base_recovered, time = random_progress.Random_SIRS()
     
     #normal = []
     #for i in range(1000, itterations):
@@ -361,37 +366,37 @@ def main(itterations):
     #stats.probplot(normal, dist="norm", plot=plt)
     #plt.show()
     
-    #guess = initial_guess(base_suseptible, base_infected, base_recovered, time_step, itterations)
-    #print(guess)
-    disease_progress = simulation(suseptible, 7*infected, recovered, population, infection_rate, recovery_rate, time_step, itterations, resuseptibility_rate, [suseptible, infected, recovered, [2,10,0]])
-    suseptible_data, infected_data, recovered_data, suseptible_data_2, infected_data_2, recovered_data_2, time = disease_progress.dual_SIR_Binomial()
-    #time = time/time_step
-    #fig = plt.figure()
-    #plt.plot(time, base_recovered[1:])
-    #plt.plot(time, base_suseptible[1:])
-    #plt.plot(time, base_infected[1:])
-    #plt.plot(time, suseptible_data[1:], 'k')
-    #plt.plot(time, infected_data[1:], 'k')
-    #plt.plot(time, recovered_data[1:],'k')
+    guess = initial_guess(base_suseptible, base_infected, base_recovered, time_step, 1000)
+    print(guess)
+    disease_progress = simulation(suseptible, infected, recovered, population, infection_rate, recovery_rate, time_step, itterations, resuseptibility_rate, [suseptible, infected, recovered, [0/population,0,0]])
+    suseptible_data, infected_data, recovered_data, time = disease_progress.SIRS_RUN()
+    time = time/time_step
+    fig = plt.figure()
+    plt.plot(time, base_recovered[1:])
+    plt.plot(time, base_suseptible[1:])
+    plt.plot(time, base_infected[1:])
+    plt.plot(time, suseptible_data[1:], 'k')
+    plt.plot(time, infected_data[1:], 'k')
+    plt.plot(time, recovered_data[1:],'k')
     #plt.plot(time, suseptible_data_2[1:], 'b')
     #plt.plot(time, infected_data_2[1:], 'b')
     #plt.plot(time, recovered_data_2[1:],'b')
-    #plt.show()
+    plt.show()
     #fig2 = plt.figure()
     #plt.plot(suseptible_data, infected_data, 'k')
     #plt.plot(base_suseptible, base_infected, 'b')
     #plt.show()
-    #print(guess[0]/guess[1])
-    return [suseptible_data_2, time]
+    print(guess[0]*population/guess[1])
+   # return [suseptible_data_2, time]
 def plot_error():
     
-    population = 26
+    population = 260
     gratings = 10
     itteration_data = []
     error = []
     time_steps = 1000
     time = main(time_steps)[1]
-    itterations = 100000
+    itterations = 10
     colour_plot = []
     colour_row = np.zeros(time_steps)
     reduced_colour_plot = []
@@ -405,8 +410,8 @@ def plot_error():
         for j in range(len(error) - 1):
             colour_plot[int(error[j])][j] += 1
     plt.imshow(colour_plot,cmap='gray', aspect = 'auto')
-plot_error()
-#main(10000)
+#plot_error()
+main(1000)
         
         
         
