@@ -1,26 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Sep  6 14:13:04 2025
-
-@author: thomas
-"""
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Sep  4 19:30:15 2025
-
-@author: thomas
-"""
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Sep  4 14:53:47 2025
-
-@author: thomas
-"""
 
 import numpy as np 
 import matplotlib.pyplot as plt
@@ -29,7 +6,7 @@ import math
 import scipy.stats as stats
 import scipy
 import time as tn
-
+from scipy.ndimage import gaussian_filter1d
 
 class next_timestep(object):
    
@@ -73,9 +50,13 @@ class next_timestep(object):
     
     def Binomial_SIRS(self):
         
-       a = np.random.binomial(self.suseptible, 1 - math.e**(-self.time_step*self.infection_rate*self.infected))
-       b = np.random.binomial(self.infected, 1 - math.e**(-self.time_step*self.recovery_rate))
-       c = np.random.binomial(self.recovered, 1-math.e**(-self.time_step*self.resuseptibility_rate))
+       #a = np.random.binomial(self.suseptible, 1 - math.e**(-self.time_step*self.infection_rate*self.infected))
+       #b = np.random.binomial(self.infected, 1 - math.e**(-self.time_step*self.recovery_rate))
+       #c = np.random.binomial(self.recovered, 1-math.e**(-self.time_step*self.resuseptibility_rate))
+       a = np.random.poisson( self.time_step*self.infection_rate*self.infected*self.suseptible)
+       b = np.random.poisson(self.time_step*self.recovery_rate*self.infected)
+       c = np.random.poisson(self.time_step*self.resuseptibility_rate*self.recovered)
+
        new_suseptible = max(self.suseptible - a+ c,0)
        new_infected = max(self.infected + a - b,0)
        new_recovered = max(self.recovered + b - c,0)
@@ -259,10 +240,12 @@ class data_analysis(object):
         
             chance_of_occourance = stats.binom.pmf(change_in_suseptible, self.suseptible_data[i], 1 - math.e**(-self.time_step*self.guess[0]*self.infected_data[i]/(self.suseptible_data[0] + self.infected_data[0])))
             
-        else:
+        elif self.j == 1:
             change_in_recovered = self.recovered_data[i+1] - self.recovered_data[i]
         
             chance_of_occourance = stats.binom.pmf(change_in_recovered, self.infected_data[i], 1 - math.e**(-self.time_step*self.guess[1]))
+        elif self.j ==2:
+            e = 1
         return chance_of_occourance
     def likihood(self):
         
@@ -274,7 +257,7 @@ class data_analysis(object):
 def scipy_mediator(guess, other_data):  
     error = data_analysis(other_data[0], other_data[1], other_data[2], guess, other_data[3], other_data[4], other_data[5], other_data[6])
     return error.likihood()
-#def initial_guess():
+
 def initial_guess(base_suseptible, base_infected, base_recovered, time_step, itterations):
     population = base_infected[0] + base_infected[0] + base_suseptible[0]
     guess = [0,0,0]
@@ -332,19 +315,19 @@ def initial_guess(base_suseptible, base_infected, base_recovered, time_step, itt
     guess[1] = scipy.optimize.minimize(scipy_mediator,[0,temp_guess_2/10 + best_guess_2,0], [base_suseptible, base_infected, base_recovered,time_step,itterations,1, scale], bounds=bound, method='SLSQP', tol = 0.0000000000000000000000001)
     
     
-    return [guess[0].x[0]/population, guess[1].x[1]]
+    return [guess[0].x[0], guess[1].x[1]]
 
 def main(itterations):
-    population = 70000000
-    infection_rate = 20/(population)
-    recovery_rate = 14
-    time_step =0.0002
+    population = 1000
+    infection_rate = 1/(population)
+    recovery_rate = 0.15
+    time_step =0.1
     
-    resuseptibility_rate = 00
+    resuseptibility_rate = 0.1
     suseptible = np.ones(1)
     infected = np.ones(1)
     recovered = np.ones(1)
-    infected_number = 10
+    infected_number = 1
     recovered_number = 0
     infected =  infected_number*infected
     recovered = recovered_number*population*recovered
@@ -355,42 +338,58 @@ def main(itterations):
    
     
    
-
+    disease_progress = simulation(suseptible, infected, recovered, population, infection_rate, recovery_rate, time_step, itterations, resuseptibility_rate, [suseptible, infected, recovered, [0/population,0,0]])
+    suseptible_data, infected_data, recovered_data, time = disease_progress.SIRS_RUN()
     random_progress = simulation(suseptible, infected, recovered, population, infection_rate, recovery_rate, time_step, itterations, resuseptibility_rate, 0)
     base_suseptible, base_infected, base_recovered, time = random_progress.Random_SIRS()
     
     #normal = []
-    #for i in range(1000, itterations):
-    #    normal.append(base_suseptible[i])
+    #for i in range(00, itterations):
+    #    normal.append(base_suseptible[i] - suseptible_data[i])
     #fig = plt.figure()
     #stats.probplot(normal, dist="norm", plot=plt)
     #plt.show()
     
-    guess = initial_guess(base_suseptible, base_infected, base_recovered, time_step, 1000)
-    print(guess)
-    disease_progress = simulation(suseptible, infected, recovered, population, infection_rate, recovery_rate, time_step, itterations, resuseptibility_rate, [suseptible, infected, recovered, [0/population,0,0]])
-    suseptible_data, infected_data, recovered_data, time = disease_progress.SIRS_RUN()
+    #guess = initial_guess(base_suseptible, base_infected, base_recovered, time_step, 1000)
+    #print(guess)
+    
+    
+    #disease_progress_2 =  simulation(suseptible, infected, recovered, population, guess[0], guess[1], time_step, itterations, resuseptibility_rate, [suseptible, infected, recovered, [0/population,0,0]])
+    #suseptible_data_2, infected_data_2, recovered_data_2, time = disease_progress_2.SIRS_RUN()
     time = time/time_step
     fig = plt.figure()
     plt.plot(time, base_recovered[1:])
-    plt.plot(time, base_suseptible[1:])
     plt.plot(time, base_infected[1:])
+    plt.plot(time, base_suseptible[1:])
     plt.plot(time, suseptible_data[1:], 'k')
     plt.plot(time, infected_data[1:], 'k')
     plt.plot(time, recovered_data[1:],'k')
+    plt.show()
     #plt.plot(time, suseptible_data_2[1:], 'b')
     #plt.plot(time, infected_data_2[1:], 'b')
     #plt.plot(time, recovered_data_2[1:],'b')
-    plt.show()
+    #plt.show()
     #fig2 = plt.figure()
     #plt.plot(suseptible_data, infected_data, 'k')
     #plt.plot(base_suseptible, base_infected, 'b')
     #plt.show()
-    print(guess[0]*population/guess[1])
-   # return [suseptible_data_2, time]
+    #print(guess[0]*population/guess[1])
+   
+    #smoothed_data = gaussian_filter1d(base_suseptible, sigma=10)
+    smoothed_data = []
+    new_time = []
+    for i in range(0, int(len(suseptible_data) - 100)):
+        smoothed_data.append(sum(base_suseptible[i:i+100]))
+        new_time.append(i)
+    fig2 = plt.figure()
+    plt.plot(new_time, smoothed_data)
+    plt.show()
+    
+        
+    return [suseptible_data, time]
 def plot_error():
     
-    population = 260
+    population = 10
     gratings = 10
     itteration_data = []
     error = []
@@ -411,8 +410,8 @@ def plot_error():
             colour_plot[int(error[j])][j] += 1
     plt.imshow(colour_plot,cmap='gray', aspect = 'auto')
 #plot_error()
-main(1000)
-        
-        
+main(100000)
+
+     
         
     
