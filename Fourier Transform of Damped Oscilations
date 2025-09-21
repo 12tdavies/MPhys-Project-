@@ -1,3 +1,27 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Sep  6 14:13:04 2025
+
+@author: thomas
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Sep  4 19:30:15 2025
+
+@author: thomas
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Sep  4 14:53:47 2025
+
+@author: thomas
+"""
+
 import numpy as np 
 import matplotlib.pyplot as plt
 import random
@@ -57,7 +81,7 @@ class next_timestep(object):
        #c = np.random.normal(self.time_step*self.resuseptibility_rate*self.recovered,0.1000*self.time_step*self.resuseptibility_rate*self.recovered)
        #print(a)
        new_suseptible = max(self.suseptible - a+ c,0)
-       new_infected = max(self.infected + a - b,1)
+       new_infected = max(self.infected + a - b,0)
        new_recovered = max(self.recovered + b - c,0)
    
        return new_suseptible, new_infected, new_recovered
@@ -263,7 +287,6 @@ class data_analysis(object):
 def scipy_mediator(guess, other_data):  
     error = data_analysis(other_data[0], other_data[1], other_data[2], guess, other_data[3], other_data[4], other_data[5], other_data[6])
     return error.likihood()
-
 def initial_guess(base_suseptible, base_infected, base_recovered, time_step, itterations):
     population = base_infected[0] + base_infected[0] + base_suseptible[0]
     guess = [0,0,0]
@@ -372,7 +395,7 @@ def main(itterations):
     plt.plot(time, recovered_data[1:],'k')
     plt.show()
     
-    ft = data_analysis(suseptible_data, infected_data, recovered_data, 1, time_step, itterations, 1, 1)
+    ft = data_analysis(base_suseptible[150000:], infected_data, recovered_data, 1, time_step, itterations, 1, 1)
     ft.fourier_transform()
     #plt.plot(time, suseptible_data_2[1:], 'b')
     #plt.plot(time, infected_data_2[1:], 'b')
@@ -408,11 +431,11 @@ def main(itterations):
     #print(n)
     #plt.plot(time,rhs[1:])
     #plt.show()
-    #fig = plt.figure()
-    #plt.plot(base_suseptible[1:], -base_suseptible[:-1] + base_suseptible[1:])
+    fig = plt.figure()
+    plt.plot(base_suseptible[1:], -base_suseptible[:-1] + base_suseptible[1:])
     #fig = plt.figure()
     #plt.plot(time,2*infection_rate*base_suseptible[1:]/((recovery_rate+resuseptibility_rate)))
-    #plt.show()
+    plt.show()
     return [base_suseptible, time]
 def plot_error():
     
