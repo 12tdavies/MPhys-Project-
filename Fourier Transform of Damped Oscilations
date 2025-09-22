@@ -1,27 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Sep  6 14:13:04 2025
-
-@author: thomas
-"""
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Sep  4 19:30:15 2025
-
-@author: thomas
-"""
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Sep  4 14:53:47 2025
-
-@author: thomas
-"""
-
 import numpy as np 
 import matplotlib.pyplot as plt
 import random
@@ -281,9 +257,10 @@ class data_analysis(object):
         fft_result = np.fft.fft(self.suseptible_data)
         freqs = np.fft.fftfreq(len(self.suseptible_data), 1)
         amplitude = np.abs(fft_result) / len(self.suseptible_data)
-        fig = plt.figure()
-        plt.plot(freqs[1:len(freqs)//2], amplitude[1:len(amplitude)//2])
-        plt.show()
+        #fig = plt.figure()
+        #plt.plot(freqs[1:len(freqs)//2], amplitude[1:len(amplitude)//2])
+        #plt.show()
+        return np.log10(freqs[1:len(freqs)//2]), np.log10(amplitude[1:len(amplitude)//2])
 def scipy_mediator(guess, other_data):  
     error = data_analysis(other_data[0], other_data[1], other_data[2], guess, other_data[3], other_data[4], other_data[5], other_data[6])
     return error.likihood()
@@ -346,13 +323,14 @@ def initial_guess(base_suseptible, base_infected, base_recovered, time_step, itt
     
     return [guess[0].x[0], guess[1].x[1]]
 
-def main(itterations):
+def main(itterations, i):
     population = 25000000000000
     infection_rate = 1/(population)
     recovery_rate = 0.5
-    time_step = 0.03
+    time_step = 0.3
     
-    resuseptibility_rate = 0.003
+    resuseptibility_rate = 0.00003*(10**i)
+    print(resuseptibility_rate)
     suseptible = np.ones(1)
     infected = np.ones(1)
     recovered = np.ones(1)
@@ -367,8 +345,8 @@ def main(itterations):
    
     
    
-    disease_progress = simulation(suseptible, infected, recovered, population, infection_rate, recovery_rate, time_step, itterations, resuseptibility_rate, [suseptible, infected, recovered, [0/population,0,0]])
-    suseptible_data, infected_data, recovered_data, time = disease_progress.SIRS_RUN()
+    #disease_progress = simulation(suseptible, infected, recovered, population, infection_rate, recovery_rate, time_step, itterations, resuseptibility_rate, [suseptible, infected, recovered, [0/population,0,0]])
+    #suseptible_data, infected_data, recovered_data, time = disease_progress.SIRS_RUN()
     random_progress = simulation(suseptible, infected, recovered, population, infection_rate, recovery_rate, time_step, itterations, resuseptibility_rate, 0)
     base_suseptible, base_infected, base_recovered, time = random_progress.Random_SIRS()
     
@@ -385,18 +363,18 @@ def main(itterations):
     
     #disease_progress_2 =  simulation(suseptible, infected, recovered, population, guess[0], guess[1], time_step, itterations, resuseptibility_rate, [suseptible, infected, recovered, [0/population,0,0]])
     #suseptible_data_2, infected_data_2, recovered_data_2, time = disease_progress_2.SIRS_RUN()
-    time = time/time_step
-    fig = plt.figure()
-    plt.plot(time, base_recovered[1:])
-    plt.plot(time, base_infected[1:])
-    plt.plot(time, base_suseptible[1:])
-    plt.plot(time, suseptible_data[1:], 'k')
-    plt.plot(time, infected_data[1:], 'k')
-    plt.plot(time, recovered_data[1:],'k')
-    plt.show()
+    #time = time/time_step
+    #fig = plt.figure()
+    #plt.plot(time, base_recovered[1:])
+    #plt.plot(time, base_infected[1:])
+    #plt.plot(time, base_suseptible[1:])
+    #plt.plot(time, suseptible_data[1:], 'k')
+    #plt.plot(time, infected_data[1:], 'k')
+    #plt.plot(time, recovered_data[1:],'k')
+    #plt.show()
     
-    ft = data_analysis(base_suseptible[150000:], infected_data, recovered_data, 1, time_step, itterations, 1, 1)
-    ft.fourier_transform()
+    ft = data_analysis(base_suseptible, 1, 1, 1, time_step, itterations, 1, 1)
+    return ft.fourier_transform()
     #plt.plot(time, suseptible_data_2[1:], 'b')
     #plt.plot(time, infected_data_2[1:], 'b')
     #plt.plot(time, recovered_data_2[1:],'b')
@@ -431,12 +409,13 @@ def main(itterations):
     #print(n)
     #plt.plot(time,rhs[1:])
     #plt.show()
-    fig = plt.figure()
-    plt.plot(base_suseptible[1:], -base_suseptible[:-1] + base_suseptible[1:])
     #fig = plt.figure()
-    #plt.plot(time,2*infection_rate*base_suseptible[1:]/((recovery_rate+resuseptibility_rate)))
-    plt.show()
-    return [base_suseptible, time]
+    #plt.plot(base_suseptible[1:], -base_suseptible[:-1] + base_suseptible[1:])
+    #
+    #fig = plt.figure()
+    #plt.plot(time,infection_rate*(base_suseptible[1:] + base_infected)/((recovery_rate+resuseptibility_rate)))
+    #plt.show()
+    #return [base_suseptible, time]
 def plot_error():
     
     population = 26
@@ -459,7 +438,23 @@ def plot_error():
             colour_plot[int(error[j])][j] += 1
     plt.imshow(colour_plot,cmap='gray', aspect = 'auto')
 #plot_error()
-main(1000000)
+
+fig = plt.figure()
+ax = fig.add_subplot(projection="3d")
+
+for i, freq in enumerate([0.00003,0.0003,0.003, 0.03, 0.3, 3]):
+    
+    x , y = main(10000000,i)
+    # Plot on z=i so each curve lies in a different z-plane
+    ax.plot(x,y, zs=i, zdir="y", label=f"λ={freq}")
+
+ax.set_xlabel("log_10(frequency)")
+ax.set_ylabel("λ")
+ax.set_zlabel("log_10(amplitude)")
+fig.legend(loc='outside right upper')
+ax.view_init(elev=20, azim=-35)
+plt.show()
+
 
      
         
