@@ -36,28 +36,18 @@ class next_timestep(object):
         new_recovered = self.recovered + self.time_step*self.recovery_rate*self.infected - self.time_step*self.resuseptibility_rate*self.recovered
         
         return new_suseptible, new_infected, new_recovered
-   
-    def Random_SIRS(self):
-        a = max(0,random.normalvariate(1, 1))
-        b = max(0,random.normalvariate(1, 1))
-        c = max(0,random.normalvariate(1, 1))
-        new_suseptible = self.suseptible - a*self.time_step*self.infection_rate*self.suseptible*self.infected + c*self.time_step*self.resuseptibility_rate*self.recovered
-        new_infected = self.infected + a*self.time_step*self.infection_rate*self.suseptible*self.infected - b*self.time_step*self.recovery_rate*self.infected
-        new_recovered = self.recovered + b*self.time_step*self.recovery_rate*self.infected - c*self.time_step*self.resuseptibility_rate*self.recovered
-        
-        return new_suseptible, new_infected, new_recovered
     
     def Binomial_SIRS(self):
         
-       a = np.random.binomial(self.suseptible, 1 - math.e**(-self.time_step*self.infection_rate*self.infected))
-       b = np.random.binomial(self.infected, 1 - math.e**(-self.time_step*self.recovery_rate))
-       c = np.random.binomial(self.recovered, 1-math.e**(-self.time_step*self.resuseptibility_rate))
+       a = np.random.poisson(self.time_step*self.infection_rate*self.infected*self.suseptible)
+       b = np.random.poisson(self.time_step*self.recovery_rate*self.infected)
+       c = np.random.poisson(self.time_step*self.resuseptibility_rate*self.recovered)
        #a = np.random.normal(self.time_step*self.infection_rate*self.infected*self.suseptible, 0.1000*self.time_step*self.infection_rate*self.infected*self.suseptible)
        #b = np.random.normal(self.time_step*self.recovery_rate*self.infected, 0.1000*self.time_step*self.recovery_rate*self.infected)
        #c = np.random.normal(self.time_step*self.resuseptibility_rate*self.recovered,0.1000*self.time_step*self.resuseptibility_rate*self.recovered)
        #print(a)
-       new_suseptible = max(self.suseptible - a+ c,0)
-       new_infected = max(self.infected + a - b,0)
+       new_suseptible = max(self.suseptible - a + c,0)
+       new_infected = max(self.infected + a - b,1)
        new_recovered = max(self.recovered + b - c,0)
    
        return new_suseptible, new_infected, new_recovered
@@ -324,21 +314,22 @@ def initial_guess(base_suseptible, base_infected, base_recovered, time_step, itt
     return [guess[0].x[0], guess[1].x[1]]
 
 def main(itterations, i):
-    population = 25000000000000
+    population = 250000000000000
     infection_rate = 1/(population)
     recovery_rate = 0.5
-    time_step = 0.3
+    time_step = 0.5
     
     resuseptibility_rate = 0.00003*(10**i)
     print(resuseptibility_rate)
     suseptible = np.ones(1)
     infected = np.ones(1)
     recovered = np.ones(1)
-    infected_number = 10
-    recovered_number = 0
+    suseptible_number = (recovery_rate)/infection_rate - 100000000
+    infected_number = resuseptibility_rate*(population*infection_rate - recovery_rate)/(infection_rate*(resuseptibility_rate + recovery_rate))
+    recovered_number = population - suseptible_number - infected_number
     infected =  infected_number*infected
-    recovered = recovered_number*population*recovered
-    suseptible = (population - infected_number - recovered_number)*suseptible
+    recovered = recovered_number*recovered
+    suseptible = suseptible_number*suseptible
 
     
     #print(suseptible_data)
@@ -364,16 +355,16 @@ def main(itterations, i):
     #disease_progress_2 =  simulation(suseptible, infected, recovered, population, guess[0], guess[1], time_step, itterations, resuseptibility_rate, [suseptible, infected, recovered, [0/population,0,0]])
     #suseptible_data_2, infected_data_2, recovered_data_2, time = disease_progress_2.SIRS_RUN()
     #time = time/time_step
-    #fig = plt.figure()
-    #plt.plot(time, base_recovered[1:])
-    #plt.plot(time, base_infected[1:])
-    #plt.plot(time, base_suseptible[1:])
+    fig = plt.figure()
+    plt.plot(time, base_recovered[1:])
+    plt.plot(time, base_infected[1:])
+    plt.plot(time, base_suseptible[1:])
     #plt.plot(time, suseptible_data[1:], 'k')
     #plt.plot(time, infected_data[1:], 'k')
     #plt.plot(time, recovered_data[1:],'k')
-    #plt.show()
+    plt.show()
     
-    ft = data_analysis(base_suseptible, 1, 1, 1, time_step, itterations, 1, 1)
+    ft = data_analysis(base_recovered, 1, 1, 1, time_step, itterations, 1, 1)
     return ft.fourier_transform()
     #plt.plot(time, suseptible_data_2[1:], 'b')
     #plt.plot(time, infected_data_2[1:], 'b')
@@ -418,7 +409,7 @@ def main(itterations, i):
     #return [base_suseptible, time]
 def plot_error():
     
-    population = 26
+    population = 2600000000000
     itteration_data = []
     error = []
     time_steps = 100
@@ -442,11 +433,11 @@ def plot_error():
 fig = plt.figure()
 ax = fig.add_subplot(projection="3d")
 
-for i, freq in enumerate([0.00003,0.0003,0.003, 0.03, 0.3, 3]):
+for i, freq in enumerate([0.00003,0.0003,0.003, 0.03,0.3]):
     
-    x , y = main(10000000,i)
+    x , y = main(1000000,i)
     # Plot on z=i so each curve lies in a different z-plane
-    ax.plot(x,y, zs=i, zdir="y", label=f"λ={freq}")
+    ax.plot(x,y/max(y), zs=i, zdir="y", label=f"λ={freq}")
 
 ax.set_xlabel("log_10(frequency)")
 ax.set_ylabel("λ")
