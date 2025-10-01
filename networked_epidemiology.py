@@ -13,6 +13,7 @@ import math
 import random
 import scipy
 import scipy.stats as stats
+import time as tn
 G = nx.Graph()
 
 class next_timestep(object):
@@ -44,17 +45,6 @@ class next_timestep(object):
         new_recovered = self.recovered + self.time_step*self.recovery_rate*self.infected - self.time_step*self.resuseptibility_rate*self.recovered
         
         return [new_suseptible, new_infected, new_recovered]
-   
-    def Random_SIRS(self):
-        a = max(0,random.normalvariate(1, 1))
-        b = max(0,random.normalvariate(1, 1))
-        c = max(0,random.normalvariate(1, 1))
-        new_suseptible = self.suseptible - a*self.time_step*self.infection_rate*self.suseptible*self.infected + c*self.time_step*self.resuseptibility_rate*self.recovered
-        new_infected = self.infected + a*self.time_step*self.infection_rate*self.suseptible*self.infected - b*self.time_step*self.recovery_rate*self.infected
-        new_recovered = self.recovered + b*self.time_step*self.recovery_rate*self.infected - c*self.time_step*self.resuseptibility_rate*self.recovered
-        
-        return new_suseptible, new_infected, new_recovered
-    
     def Binomial_SIRS(self):
         
        a = np.random.poisson(self.suseptible*self.time_step*self.infection_rate*(self.infected+self.other_variables))
@@ -65,7 +55,7 @@ class next_timestep(object):
        #c = np.random.normal(self.time_step*self.resuseptibility_rate*self.recovered,0.1000*self.time_step*self.resuseptibility_rate*self.recovered)
        #print(a)
        new_suseptible = max(self.suseptible - a+ c,0)
-       new_infected = max(self.infected + a - b,1)
+       new_infected = max(self.infected + a - b,0)
        new_recovered = max(self.recovered + b - c,0)
    
        return [new_suseptible, new_infected, new_recovered]
@@ -108,7 +98,7 @@ class next_timestep(object):
     
 class network_update(object):
  
-    def __init__(self, G, infection_rate, recovery_rate, resuseptibility_rate, other_data, time_step):
+    def __init__(self, G, infection_rate, recovery_rate, resuseptibility_rate, other_data, time_step, itterations):
   
         self.G = G
         self.other_data = other_data
@@ -116,6 +106,7 @@ class network_update(object):
         self.infection_rate = infection_rate
         self.resuseptibility_rate = resuseptibility_rate
         self.recovery_rate = recovery_rate
+        self.itterations = itterations
         
     def deterministic_SIRS(self):
         suseptible_data = []
@@ -126,7 +117,7 @@ class network_update(object):
         present_state = []
         for i in range(len(G)):
            present_state.append(G.nodes[i]['state'])
-        for j in range(100000):
+        for j in range(self.itterations):
             suseptible = 0
             infected = 0
             recovered = 0
@@ -148,10 +139,10 @@ class network_update(object):
             suseptible_data.append(suseptible)
             infected_data.append(infected)
             recovered_data.append(recovered)
-
             time.append(j)
             present_state = new_states.copy()
             new_states = []
+            
         return suseptible_data, infected_data, recovered_data, time
 class data_analysis(object):
     
@@ -170,26 +161,11 @@ class data_analysis(object):
        
         a = 1
     
-    def binomial(self, i):
-        
-        if self.j ==0:
-        
-            change_in_suseptible = self.suseptible_data[i] - self.suseptible_data[i+1]
-        
-        elif self.j == 1:
-            change_in_recovered = self.recovered_data[i+1] - self.recovered_data[i]
-        
-            chance_of_occourance = stats.binom.pmf(change_in_suseptible, self.infected_data[i], 1 - math.e**(-self.time_step*self.guess[1]))
-        elif self.j ==2:
-            e = 1
-        return chance_of_occourance
-    def likihood(self):
-        
-        likihood = self.scale
-        for i in range(len(self.suseptible_data) - 1):
-            likihood = likihood + self.binomial(i)
-
-        return -likihood
+    def chi_squared_data(self):
+        error = 0
+        for i in range(1,len(self.suseptible_data)):
+            error += abs(self.suseptible_data[i] - self.suseptible_data[i-1] - self.time_step*self.guess[0]*self.suseptible_data[i-1]*self.infected_data[i-1] + self.time_step*self.guess[2]*self.recovered_data[i-1])
+            error += abs(self.infected_data[i] - self.infected_data[i-1] + self.guess[0]*self.suseptible_data[i-1]*self.infected_data[i-1] - self.time_step*self.guess[1]*self.infected_data[i-1])
     def fourier_transform(self):
         fft_result = np.fft.fft(self.suseptible_data)
         freqs = np.fft.fftfreq(len(self.suseptible_data), 1)
@@ -198,101 +174,30 @@ class data_analysis(object):
         #plt.plot(freqs[1:len(freqs)//2], amplitude[1:len(amplitude)//2])
         #plt.show()
         return np.log10(freqs[1:len(freqs)//2]), np.log10(amplitude[1:len(amplitude)//2])
-def scipy_mediator(guess, other_data):  
-    error = data_analysis(other_data[0], other_data[1], other_data[2], guess, other_data[3], other_data[4], other_data[5], other_data[6])
-    return error.likihood()
-def initial_guess(base_suseptible, base_infected, base_recovered, time_step, itterations):
-    population = base_infected[0] + base_infected[0] + base_suseptible[0]
-    guess = [0,0,0]
-    minimum_1 = 00000
-    bound = [(0,20)]
-    best_guess_1 = 0
-    for i in range(0,20):
-      probability = -scipy_mediator([i,0,0], [base_suseptible, base_infected, base_recovered,time_step,itterations, 0, 1])
-      
-      if probability > minimum_1:
-          minimum_1 = probability
-          best_guess_1 = i
-   
-    temp_guess_1 = 0
-    minimum_1 = 0
-    for j in range(-10,10):
-      probability = -scipy_mediator( [best_guess_1+ j/(10),0,0], [base_suseptible, base_infected, base_recovered,time_step,itterations, 0, 1])
 
-      if probability > minimum_1:
-          minimum_1 = probability
-          temp_guess_2 = j
-    
-    inverse_scale = -scipy_mediator([temp_guess_1/(10) + best_guess_1,0,0], [base_suseptible, base_infected, base_recovered,time_step,itterations, 0, 1])
-    if inverse_scale == 0:
-       scale = 1
-    else:
-       scale = 1/inverse_scale
-    guess[0] = scipy.optimize.minimize(scipy_mediator,[temp_guess_1/(10) + best_guess_1,0,0], [base_suseptible, base_infected, base_recovered,time_step,itterations,0, scale], bounds=bound, method='SLSQP', tol = 0.0000000000000000000000001)
-    
-    minimum_2 = 00000
-    bound = [(0,20)]
-    best_guess_2 = 0
-    for i in range(1,20):
-       probability = -scipy_mediator([0,i,0], [base_suseptible, base_infected, base_recovered,time_step,itterations, 1, 1])
-       
-       if probability > minimum_2:
-           minimum_2 = probability
-           best_guess_2 = i
-    
-    temp_guess_2 = 0
-    minimum_2 = 0
-    for j in range(-10,10):
-       probability = -scipy_mediator([0, best_guess_2 + j/10,0], [base_suseptible, base_infected, base_recovered,time_step,itterations, 1, 1])
-       
-       if probability > minimum_2:
-           minimum_2 = probability
-           temp_guess_2 = j
-    
-    inverse_scale = -scipy_mediator([0, temp_guess_2/10 + best_guess_2,0], [base_suseptible, base_infected, base_recovered,time_step,itterations, 1, 1])
-    if inverse_scale == 0:
-        scale = 1
-    else:
-        scale = 1/inverse_scale
-    guess[1] = scipy.optimize.minimize(scipy_mediator,[0,temp_guess_2/10 + best_guess_2,0], [base_suseptible, base_infected, base_recovered,time_step,itterations,1, scale], bounds=bound, method='SLSQP', tol = 0.0000000000000000000000001)
+def main(itterations,z):
+    number_of_nodes = z
+    for i in range(0,number_of_nodes):
+        G.add_node(i, state=[80000, 10, 50000])
+    for i in range(0,number_of_nodes):
+        for j in range(0,number_of_nodes):
+            if i != j:
+                G.add_edge(i, j, weight = 0.1)
+            else:
+                G.add_edge(i, j, weight = 0)
+    population = 0
+    for i in G:
+        population += sum(G.nodes[i]["state"])
+    update = network_update(G, 1, 0.5, 0.01, 1, 0.1, itterations)
+    suseptible,infected,recovered, time = update.deterministic_SIRS()
+    fig = plt.figure()
+    plt.plot(time, suseptible, label = 'suseptible')
+    plt.plot(time, infected, label = 'infected')
+    plt.plot(time, recovered, label = 'recovered')
+    plt.legend()
+    plt.show()
+    estimate = data_analysis(suseptible_data, infected_data, recovered_data, guess, time_step, itterations, j, scale)
+main(20000,1)
     
     
-    return [guess[0].x[0], guess[1].x[1]]
-
-number_of_nodes = 10
-population_per_node = 1000
-for i in range(0,number_of_nodes):
-    G.add_node(i, state=[7000, 48000, 647000])
-for i in range(0,number_of_nodes):
-    for j in range(0,number_of_nodes):
-        if i != j:
-            G.add_edge(i, j, weight = np.random.uniform(0,0.1))
-        else:
-            G.add_edge(i, j, weight = 0)
-population = 0
-
-for i in range(number_of_nodes,2*number_of_nodes):
-    G.add_node(i, state =[7000, 48000, 647000])
-for i in range(number_of_nodes,2*number_of_nodes):
-    for j in range(number_of_nodes,2*number_of_nodes):
-        if i != j:
-            G.add_edge(i, j, weight = np.random.uniform(0,0.1))
-        else:
-            G.add_edge(i, j, weight = 0)
-G.add_edge(0, number_of_nodes + 1, weight = 0.4)
-for i in G:
-    population += sum(G.nodes[i]["state"])
-
-pos = nx.spring_layout(G)
-nx.draw(G, pos)
-
-fig = plt.figure()
-nx.draw_networkx(G, pos)
-plt.show()
-update = network_update(G, 1, 0.5, 0.0003, 1, 0.1)
-suseptible,infected,recovered, time = update.deterministic_SIRS()
-fig = plt.figure()
-plt.plot(time,suseptible)
-plt.plot(time,infected)
-plt.plot(time,recovered)
-plt.show()
+    
