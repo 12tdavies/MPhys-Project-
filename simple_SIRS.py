@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 
-def forward_difference(suseptible,infected,recovered, infection_rate, recovery_rate, immunity_loss_rate,time_step):
+def forward_difference(suseptible,infected,recovered, infection_rate, recovery_rate, immunity_loss_rate,time_step, additional_infection_rate):
     
-    infections = infection_rate*suseptible*infected*time_step
+    infections = infection_rate*suseptible*infected*time_step + additional_infection_rate*(time_step**(1/2))*suseptible*infected
     recoveries = recovery_rate*infected*time_step
     immunity_losses = immunity_loss_rate*recovered*time_step
     
@@ -16,7 +16,7 @@ def forward_difference(suseptible,infected,recovered, infection_rate, recovery_r
 
 def infection_rate_generator(average_infection_rate,time_step):
     #print(average_infection_rate + (time_step**0.5)*random.normalvariate(0, 1))
-    return average_infection_rate + 0.01*(time_step**1/2)*random.normalvariate(0, 1)
+    return 0.01*random.normalvariate(0, 1)
     
 
 def main(itterations, recovery_rate, immunity_loss_rate, time_step):
@@ -40,9 +40,9 @@ def main(itterations, recovery_rate, immunity_loss_rate, time_step):
     
     for i in range(itterations):
         
-        current_infection_rate = infection_rate_generator(infection_rate, time_step)
+        additional_infection_rate = infection_rate_generator(infection_rate, time_step)
 
-        suseptible_data[i+1], infected_data[i+1], recovered_data[i+1] = forward_difference(suseptible_data[i], infected_data[i], recovered_data[i], current_infection_rate, recovery_rate, immunity_loss_rate, time_step)
+        suseptible_data[i+1], infected_data[i+1], recovered_data[i+1] = forward_difference(suseptible_data[i], infected_data[i], recovered_data[i], infection_rate, recovery_rate, immunity_loss_rate, time_step, additional_infection_rate)
         time_data[i+1] = time_data[i] + time_step
     
     fig = plt.figure()
@@ -52,4 +52,4 @@ def main(itterations, recovery_rate, immunity_loss_rate, time_step):
     plt.legend()
     plt.show()
     
-main(10000000,0.5,0.0003, 0.001)
+main(1000000,0.5,0.0003, 0.1)
