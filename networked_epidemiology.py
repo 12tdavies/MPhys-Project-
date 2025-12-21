@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Oct 21 18:26:26 2025
-
-@author: thomas
-"""
-
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
@@ -94,88 +86,19 @@ class next_timestep(object):
         new_recovered_1 = self.recovered + b
 
         return new_suseptible_1, new_infected_1, new_recovered_1, new_suseptible_2, new_infected_2, new_recovered_2
-    
-class network_generation(object):
-    def __init__(self,initial_conditions, number_of_nodes):
-        self.initial_conditions = initial_conditions
-        self.number_of_nodes = number_of_nodes
+    def envirometal_stochasticity(self, varience_in_noise):
         
-    def network_initialisation(self):
-        
-        G = nx.Graph()
-        
-        for i in range(0,self.number_of_nodes):
-            
-            G.add_node(i, state=self.initial_conditions)
-        
-        for i in range(0,self.number_of_nodes):
-            
-            for j in range(i+1,self.number_of_nodes):
-                
-                connection_chance = np.random.uniform(0,1)
-                if connection_chance < 2/self.number_of_nodes:
-                    weight = float(max(min(0,np.random.exponential(1)),1))
-                    G.add_edge(i, j, weight = weight)   
-                    G.add_edge(j, i, weight = weight)   
-        #print(G.get_edge_data(0, 1))           
-        population = 0
-        for i in G:
-            
-            population += sum(G.nodes[i]["state"])
-            
-        return G, population
-    def network_update(self, network_states):
-        
-        G = nx.Graph()
-        
-        for i in range(0,self.number_of_nodes):
-            
-            G.add_node(i, state=network_states[i])
-        
-        for i in range(0,self.number_of_nodes):
-            
-            for j in range(i+1,self.number_of_nodes):
-                
-                connection_chance = np.random.uniform(0,1)
-                if connection_chance < 2/self.number_of_nodes:
-                    weight = float(max(min(0,np.random.exponential(1)),1))
-                    G.add_edge(i, j, weight = weight)   
-                    G.add_edge(j, i, weight = weight)   
-        #print(G.get_edge_data(0, 1))           
-        population = 0
-        for i in G:
-            
-            population += sum(G.nodes[i]["state"])
-
-        return G, population
-    def network_initialisation2(self,link):
-
-        G = nx.Graph()
-        
-        for i in range(0,self.number_of_nodes):
-            
-            G.add_node(i, state=self.initial_conditions)
-        
-        for i in range(0,self.number_of_nodes):
-            
-            for j in range(0,self.number_of_nodes):
-                
-                if i != j:
-                    
-                    G.add_edge(i, j, weight = link)
-                    
-                else:
-                    
-                    G.add_edge(i, j, weight = 0)
-                    
-        population = 0
-        
-        for i in G:
-            
-            population += sum(G.nodes[i]["state"])
-            
-        return G, population
-
+         additional_infection_rate = varience_in_noise*random.normalvariate(0, 1)
+         
+         infections = self.infection_rate*self.suseptible*self.infected*self.time_step + additional_infection_rate*(self.time_step**(1/2))*self.suseptible*self.infected
+         recoveries = self.recovery_rate*self.infected*self.time_step
+         immunity_losses = self.resuseptibility_rate*self.recovered*self.time_step
+         
+         new_suseptible = self.suseptible - infections + immunity_losses
+         new_infected = self.infected + infections - recoveries
+         new_recovered = self.recovered + recoveries - immunity_losses
+         
+         return [new_suseptible, new_infected, new_recovered]
 class network_update(object):
  
     def __init__(self, G, infection_rate, recovery_rate, resuseptibility_rate, other_data, time_step, itterations):
@@ -187,83 +110,43 @@ class network_update(object):
         self.resuseptibility_rate = resuseptibility_rate
         self.recovery_rate = recovery_rate
         self.itterations = itterations
-        self.suseptible_data = np.zeros(self.itterations)
-        self.infected_data = np.zeros(self.itterations)
-        self.recovered_data = np.zeros(self.itterations)
-        self.time = []
-        self.new_states = []
         
-    def Stochastic_SIRS(self):
+    def deterministic_SIRS(self):
+        suseptible_data = np.zeros(self.itterations)
+        infected_data = []
+        recovered_data = []
+        time = []
+        new_states = []
         present_state = []
         for i in range(len(self.G)):
-           present_state.append(self.G.nodes[i]['state'])    
+           present_state.append(self.G.nodes[i]['state'])
         for j in range(self.itterations):
-            suseptible = 0
-            infected = 0
-            recovered = 0
-            for i in range(len(self.G)):
-                
-                neighbors = list(self.G.neighbors(i))
-                additional_infectives = 0
-                for k in neighbors:
-                    additional_infectives += present_state[k][1]*self.G[i][k]['weight']
-                
-                internal_population = present_state[i][0]+ present_state[i][1]+ present_state[i][2]
-                self_interaction = next_timestep(present_state[i][0], present_state[i][1], present_state[i][2],internal_population , self.infection_rate, self.recovery_rate, self.time_step, self.resuseptibility_rate, additional_infectives)
-                new_state = self_interaction.SIRS()
-                self.new_states.append(new_state.copy())
-                suseptible += new_state[0]
-                infected += new_state[1]
-                recovered += new_state[2]
-            
-            self.time.append(j)
-            
-            self.suseptible_data[j] = suseptible
-            self.infected_data[j] = infected
-            self.recovered_data[j] = recovered
-    
-            present_state = self.new_states.copy()
-            self.new_states = []
-            
-        return self.suseptible_data, self.infected_data, self.recovered_data, self.time
-    
-    def network_update_stochastic_SIRS(self):
-        present_state = []
-        for i in range(len(self.G)):
-           present_state.append(self.G.nodes[i]['state'])    
-        for j in range(self.itterations):
-            suseptible = 0
-            infected = 0
-            recovered = 0
-            chance_of_update = np.random.uniform(0,1)
            
-            self.G, pop = network_generation(1,len(present_state)).network_update(present_state)
-
+            suseptible = 0
+            infected = 0
+            recovered = 0
             for i in range(len(self.G)):
                 
                 neighbors = list(self.G.neighbors(i))
                 additional_infectives = 0
                 for k in neighbors:
                     additional_infectives += present_state[k][1]*self.G[i][k]['weight']
-                
                 internal_population = present_state[i][0]+ present_state[i][1]+ present_state[i][2]
                 self_interaction = next_timestep(present_state[i][0], present_state[i][1], present_state[i][2],internal_population , self.infection_rate, self.recovery_rate, self.time_step, self.resuseptibility_rate, additional_infectives)
-                new_state = self_interaction.SIRS()
-                self.new_states.append(new_state.copy())
+                new_state = self_interaction.envirometal_stochasticity(0.1)
+                new_states.append(new_state.copy())
                 suseptible += new_state[0]
                 infected += new_state[1]
                 recovered += new_state[2]
+            suseptible_data[j] = suseptible
+            infected_data.append(infected)
+            recovered_data.append(recovered)
+            time.append(j)
+            present_state = new_states.copy()
+            new_states = []
             
-            self.time.append(j)
-            
-            self.suseptible_data[j] = suseptible
-            self.infected_data[j] = infected
-            self.recovered_data[j] = recovered
+        return suseptible_data, infected_data, recovered_data, time
     
-            present_state = self.new_states.copy()
-            self.new_states = []
-            
-        return self.suseptible_data, self.infected_data, self.recovered_data, self.time
     def SIRS_with_network_data(self):
         suseptible_data = []
         infected_data = []
@@ -334,7 +217,6 @@ class data_analysis(object):
         
         return error
     def fourier_transform(self):
-     
         fft_result = np.fft.fft(self.suseptible_data)
         freqs = np.fft.fftfreq(len(self.suseptible_data), 1)
         amplitude = np.abs(fft_result) / len(self.suseptible_data)
@@ -342,53 +224,102 @@ class data_analysis(object):
         plt.plot(gaussian_filter1d((np.log10(freqs[1:len(freqs)//2])),10), gaussian_filter1d(np.log10(amplitude[1:len(amplitude)//2]),10))
         plt.show()
         return np.log10(freqs[1:len(freqs)//2]), np.log10(amplitude[1:len(amplitude)//2])
-    
     def data_compressor(self, data, resolution):
         range_of_data = max(data) - min(data)
         data = data - np.ones(len(data))*min(data)
         reduced_data = data*resolution/range_of_data
         return reduced_data
-    
     def colour_pdf(self, x_axis, y_axis, resolution):
-        
         colour_row = np.zeros(resolution + 1)
         colour_matrix = []
-        
         for i in range(resolution + 1):
-            
             colour_matrix.append(colour_row.copy())
         x_reduced = self.data_compressor(x_axis, resolution)
         y_reduced = self.data_compressor(y_axis, resolution)
         
-        
         for i in range(len(x_reduced)):
             colour_matrix[int(x_reduced[i])][int(y_reduced[i])] += 1
         plt.imshow(colour_matrix)
-        
-def scipy_mediator(guess, other_data):  
+def scipy_mediator(guess, other_data):
+    
     error = data_analysis(other_data[0], other_data[1], other_data[2], guess, other_data[3], other_data[4], other_data[5],1)
     return error.chi_squared_data()
 def scipy_mediator2(guess, other_data):
-    network, pop = network_generation([other_data[0][0]/2, other_data[1][0]/2, other_data[2][0]/2], 2, guess[3]).network_initialisation2()
+    network, pop = network_initialisation2([other_data[0][0]/2, other_data[1][0]/2, other_data[2][0]/2], 2, guess[3])
     error = data_analysis(other_data[0], other_data[1], other_data[2], guess, other_data[3], other_data[4], other_data[5],network)
     return error.networked_chi_squared()
 
+def network_initialisation( initial_conditions, number_of_nodes):
+    
+    G = nx.Graph()
+    
+    for i in range(0,number_of_nodes):
+        
+        G.add_node(i, state=initial_conditions)
+    
+    for i in range(0,number_of_nodes):
+        
+        for j in range(i+1,number_of_nodes):
+            
+                if i != j:
+                    weight = 1
+                    G.add_edge(i, j, weight = weight)   
+                    G.add_edge(j, i, weight = weight)   
+    #print(G.get_edge_data(0, 1))           
+    population = 0
+    for i in G:
+        
+        population += sum(G.nodes[i]["state"])
+        
+    return G, population
+
+def network_initialisation2( initial_conditions, number_of_nodes, link):
+
+    G = nx.Graph()
+    
+    for i in range(0,number_of_nodes):
+        
+        G.add_node(i, state=initial_conditions)
+    
+    for i in range(0,number_of_nodes):
+        
+        for j in range(0,number_of_nodes):
+            
+            if i != j:
+                
+                G.add_edge(i, j, weight = link)
+                
+            else:
+                
+                G.add_edge(i, j, weight = 0)
+                
+    population = 0
+    
+    for i in G:
+        
+        population += sum(G.nodes[i]["state"])
+        
+    return G, population
 
 def data_generator(itterations, number_of_nodes, initial_conditions, infection_rate, recovery_rate, resuseptibility_rate, time_step):
     
-    G, population = network_generation(initial_conditions, number_of_nodes).network_initialisation()
+    G, population = network_initialisation(initial_conditions, number_of_nodes)
     
     update = network_update(G, infection_rate/sum(G.nodes[0]["state"]), recovery_rate, resuseptibility_rate, 1, time_step, itterations)
     
-    suseptible,infected,recovered, time = update.network_update_stochastic_SIRS()
-    
-    
-    suseptible1 = suseptible[50000:]
-    data_analysis(1, 1, 1, 1, 1, 1, 1, 1).colour_pdf(suseptible1[1:],suseptible1[1:] - suseptible1[:-1] , 100)
+    suseptible1,infected,recovered, time = update.deterministic_SIRS()
+
+
+    print(suseptible1[itterations - 1], infected[itterations - 1], recovered[itterations - 1])
+   
     fig = plt.figure()
     plt.plot(time[1:], infected[1:])
 
-    print([suseptible[itterations -1]/number_of_nodes, infected[itterations - 1]/number_of_nodes, recovered[itterations - 1]/number_of_nodes])
+    plt.show()
+    #fig = plt.figure()
+    #pos = nx.spring_layout(G)
+    #nx.draw(G, pos, with_labels=True)
+    #plt.show()
     
    
     
@@ -397,7 +328,7 @@ def data_generator(itterations, number_of_nodes, initial_conditions, infection_r
 
 def data_fitter(suseptible, infected, recovered, itterations, time_step):
     
-    P, population = network_generation([suseptible[0], infected[0], recovered[0]], 1)
+    P, population = network_initialisation([suseptible[0], infected[0], recovered[0]], 1)
     
     bound= [(0,0.1), (0.0001,0.1), (0.00000,0.1)]
     
@@ -407,7 +338,7 @@ def data_fitter(suseptible, infected, recovered, itterations, time_step):
     #print([abs((estimate.x[0]*population-0.1)*100/0.1), abs(estimate.x[1] - 0.01)*100/0.01, abs(estimate.x[2] - 0.0005)*100/0.0005])
     print("First order chi^2: " + str(estimate.fun))
     update = network_update(P, estimate.x[0], estimate.x[1], estimate.x[2], 1, time_step, itterations)
-    suseptible1,infected1,recovered1, time1 = update.Stochastic_SIRS()
+    suseptible1,infected1,recovered1, time1 = update.deterministic_SIRS()
    
     fig = plt.figure()
     plt.plot(time1, suseptible1, label = 'suseptible')
@@ -437,10 +368,23 @@ def main(itterations, number_of_nodes, inital_conditions, infection_rate, recove
     #data_fitter(suseptible, infected, recovered, itterations, time_step)
     #freq, amp = data_analysis(suseptible, infected, recovered, 1, time_step, itterations, 1, 1).fourier_transform()
     
-
+recovery_rate = 0.1
+infection_rate = 1
+resuseptibility_rate = 0.03
+population = 1
+infected = 1
+recovered = 1
+suseptible = 1
+suseptible_number = (recovery_rate)/(infection_rate)# + 0.01
+infected_number = resuseptibility_rate*(population*infection_rate - recovery_rate)/(infection_rate*(resuseptibility_rate + recovery_rate))
+recovered_number = population - suseptible_number - infected_number
+infected =  infected_number*infected
+recovered = recovered_number*recovered
+suseptible = suseptible_number*suseptible
 
 start = tn.time()
-main(100000,10,[15761036, 34122, 204304842], 0.5, 0.1,0.00003,0.1)
+nodes = 10
+main(100000,nodes,[suseptible_number, infected_number, recovered_number], infection_rate/nodes,recovery_rate, resuseptibility_rate,0.1)
 print(tn.time() - start)
 
     
