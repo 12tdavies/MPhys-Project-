@@ -775,7 +775,7 @@ start = tn.time()
 ticker = 0
 count = 0
 for i in range(20):
-    omega = main(10000,0.5,0.002, 0.000003)
+    omega = main(2000,0.5,0.7, 0.000003)
     if omega < 300:
         print(omega)
         count += omega
