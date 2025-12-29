@@ -1,5 +1,6 @@
 import numpy as np 
 import matplotlib.pyplot as plt
+
 import random
 import math
 import scipy.stats as stats
@@ -312,16 +313,11 @@ class data_analysis(object):
 
         freqs = np.fft.fftfreq(len(data))
 
-        magnitude = np.abs(y)
-        cut_off = 0
-        #fig = plt.figure()
-        filtered_magnitude =gaussian_filter1d(magnitude[1:int(len(freqs)/2)], 10)
-
-        #plt.plot(freqs[1:int(len(freqs)/2)], filtered_magnitude)
-        #plt.show()
-        inverse_fft = np.fft.ifft(y)
+        self.magnitude = abs(y[1:int(len(freqs)/2)])
         
-        return freqs[1:int(len(freqs)/2)], filtered_magnitude, inverse_fft
+        self.freqs = freqs[1:int(len(freqs)/2)]
+
+        return freqs[1:int(len(freqs)/10)], 1
         
     def data_compressor(self, data, resolution):
         range_of_data = max(data) - min(data)
@@ -386,7 +382,7 @@ class data_analysis(object):
                      recovery_rate = 2*(j+0.01)/resolution
                      resuseptibility_rate = 2*(i+0.01)/resolution
                     
-                     square =(resuseptibility_rate*(1 + resuseptibility_rate)/(recovery_rate + resuseptibility_rate))**2 - 4*resuseptibility_rate*(1 - recovery_rate)
+                     square =((resuseptibility_rate*( 1+resuseptibility_rate)/(resuseptibility_rate + recovery_rate))**2) - 4*resuseptibility_rate*(1 - recovery_rate)
                      real = -resuseptibility_rate*(1 + resuseptibility_rate)/(recovery_rate + resuseptibility_rate)
                      #real = - resuseptibility_rate/(resuseptibility_rate + recovery_rate)
                      #square = real**2 - 4*resuseptibility_rate*(1 - recovery_rate - resuseptibility_rate)
@@ -399,26 +395,28 @@ class data_analysis(object):
                              #preriod = main(1000, recovery_rate, resuseptibility_rate, 0.0003)
                              #colour_matrix2[resolution - i - 1][j] = math.log10(preriod)
                              #period = main(10000, recovery_rate, resuseptibility_rate, 0.0003)/0.0003**2
-                             period = (recovery_rate)*((1 - recovery_rate)*resuseptibility_rate/(recovery_rate + resuseptibility_rate))
-                             colour_matrix2[resolution - i - 1][j] = period**2#math.
+                             #period = (recovery_rate)*((1 - recovery_rate)*resuseptibility_rate/(recovery_rate + resuseptibility_rate))
+                             colour_matrix2[resolution - i - 1][j] = 0#period**2#math.
                      else:
                         if real > 0:
-                            colour_matrix[resolution - i - 1][j] = 3
+                            colour_matrix[resolution - i - 1][j] = 2
                         else:
+                            colour_matrix[resolution - i - 1][j] = 3
+
                             #freq = 0.5*abs(square)**0.5 
                             #colour_matrix[resolution - i - 1][j] = 4
-                            period = (recovery_rate)*((1 - recovery_rate)*resuseptibility_rate/(recovery_rate + resuseptibility_rate))#(recovery_rate + ((recovery_rate))**2)*(resuseptibility_rate*(1 - recovery_rate)/((resuseptibility_rate + recovery_rate)))**2#main(10000, recovery_rate, resuseptibility_rate, 0.003)/(0.003**2)
+                            #period = (recovery_rate)*((1 - recovery_rate)*resuseptibility_rate/(recovery_rate + resuseptibility_rate))#(recovery_rate + ((recovery_rate))**2)*(resuseptibility_rate*(1 - recovery_rate)/((resuseptibility_rate + recovery_rate)))**2#main(10000, recovery_rate, resuseptibility_rate, 0.003)/(0.003**2)
                             #period = main(10000, recovery_rate, resuseptibility_rate, 0.0003)/0.0003**2
-                            colour_matrix2[resolution - i - 1][j] = (period)**2#math.log10(2*math.pi/freq)#min(period, 100)#math.log10(period)#math.log(1/freq)#math.log10(1/((10**frequency) / time_step))
+                            colour_matrix2[resolution - i - 1][j] = (0.5*(abs(square))**0.5)#(period)**2#math.log10(2*math.pi/freq)#min(period, 100)#math.log10(period)#math.log(1/freq)#math.log10(1/((10**frequency) / time_step))
                             
              #Define discrete colors and colormap
-            #colors = ['black', 'blue', 'red', 'green']
+            #colors = ['red', 'blue', 'green']
             #fig, ax = plt.subplots()
             #cmap = ListedColormap(colors)
             #im = ax.imshow(colour_matrix, cmap=cmap, interpolation='none',  extent=[0, 2, 0, 2])
-            #solution_type = ['Unstable', 'Stable', 'Unstable Oscilatory','Stable Oscillatory '] 
-            #ax.set_xlabel("b")
-            #ax.set_ylabel("a")
+            #solution_type = ['Unstable', 'Stable','Stable Oscillatory '] 
+            #ax.set_xlabel("$\gamma$")
+            #ax.set_ylabel("$\lambda$")
 
             #patches = [mpatches.Patch(color=colors[i], label=solution_type[i]) for i in range(len(colors))]
 
@@ -426,18 +424,78 @@ class data_analysis(object):
             #ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc='upper left')
 
             #plt.show()
-            #im = plt.imshow(colour_matrix, cmap='viridis')
+            im = plt.imshow(colour_matrix, cmap='viridis')
 
             fig, ax = plt.subplots()
             mini = 2*0.01/resolution
             ax.imshow(colour_matrix2, extent=[mini, 2, mini, 2])
+
             im = ax.imshow(colour_matrix2, extent=[mini, 2, mini, 2])
-            ax.set_xlabel("Recovery rate")
-            ax.set_ylabel("Immunity-loss Rate")
-            fig.colorbar(im, label = "log_10(period)")
+            ax.set_xlabel("$\gamma$")
+            ax.set_ylabel("$\lambda$")
+
+            fig.colorbar(im, label = "$\log_{10}($period}$)$")
             ax.set_box_aspect(1)
             
             plt.show()
+    def energy(self,resolution,a,b):
+                colour_matrix = np.zeros((resolution,resolution))
+                colour_matrix2 = np.zeros((resolution,resolution))
+                colour_matrix3 = np.zeros((resolution,resolution))
+                s_stable = a
+                i_stable = b*(1 - a)/((a + b))
+                base_energy = 1#(a*b*(1-a)/(a+b))**2
+                for i in range(resolution):
+                     for j in range(resolution):
+                         #suseptible = s_stable + (-0.1 +0.2*i/resolution)
+                         #infected = i_stable + (-0.1 +0.2*j/resolution)*b/a
+                         suseptible = i/resolution
+                         infected = j/resolution
+                         recovered = 1 - suseptible - infected
+                         if recovered < 0:
+                             colour_matrix2[resolution - i - 1][j] = 0#math.log10(2*math.pi/freq)#min(period, 100)#math.log10(period)#math.log(1/freq)#math.log10(1/((10**frequency) / time_step))
+                         else:
+                             s,k,r = next_timestep(suseptible, infected, recovered, 1, 1, a, 1, b, 0).SIRS()
+                             energy = (suseptible - s)**2 + (infected - k)**2 + (recovered - r)**2
+                             colour_matrix2[resolution - i - 1][j] = (energy/base_energy)**0.5
+                             colour_matrix[i][j] = (energy/base_energy)**0.5
+                 #Define discrete colors and colormap
+                colors = ['black', 'blue', 'red', 'green']
+                fig, ax = plt.subplots()
+                cmap = ListedColormap(colors)
+                im = ax.imshow(colour_matrix, cmap=cmap, interpolation='none',  extent=[0, 2, 0, 2])
+                solution_type = ['Unstable', 'Stable', 'Unstable Oscilatory','Stable Oscillatory '] 
+                ax.set_xlabel("b")
+                ax.set_ylabel("a")
+
+                patches = [mpatches.Patch(color=colors[i], label=solution_type[i]) for i in range(len(colors))]
+
+
+                ax.legend(handles=patches, bbox_to_anchor=(1.05, 1), loc='upper left')
+
+                plt.show()
+                
+                #im = plt.imshow(colour_matrix, cmap='viridis')
+                #fig, ax = plt.subplots()
+                #mini = 2*0.01/resolution
+                #ax.imshow(colour_matrix2, extent=[mini, 1, mini, 1])
+                #plt.plot(i_stable,  s_stable, marker='*', markersize=15, color='yellow')
+                #im = ax.imshow(colour_matrix2, extent=[mini, 1, mini, 1])
+                #ax.set_xlabel("Fraction of Population Infected")
+                #ax.set_ylabel("Fraction of Population Suseptible")
+                #plt.title("Energy")
+                #fig.colorbar(im, label = "r$\sigma$")
+                #ax.set_box_aspect(1)
+                #fig = plt.figure()
+                #x = np.linspace(0, 1, resolution)
+                #y = np.linspace(0, 1, resolution)
+                
+                #X, Y = np.meshgrid(x, y)
+                #ax.imshow(colour_matrix2, extent=[mini, 2, mini, 2])
+                #plt.contour(X, Y, colour_matrix, levels=500)
+               
+                #plt.plot(i_stable, s_stable, marker='*', markersize=15, color='yellow')
+                #plt.show()
     def varience_effect_plotter(self):
         energy = []
         noise = []
@@ -459,6 +517,82 @@ class data_analysis(object):
         plt.ylabel('E') 
         plt.legend()
         plt.show()
+    def fft_error(self, guess):
+        
+        gamma = (guess[0])
+        omega = (guess[1])
+        
+        blank_array = np.ones(len(self.freqs))
+        
+        omega_array = omega*blank_array.copy()
+        gamma_array = gamma*gamma*blank_array.copy()
+        
+        generated_data = gamma*(1/(gamma_array + (self.freqs - omega_array)**2)) + gamma*(1/(gamma_array + (self.freqs + omega_array)**2))
+       
+        
+        total = np.ones(len(self.freqs))
+        total1 = np.ones(len(self.freqs))
+        
+        total[0] = self.magnitude[0]
+        total1[0] = generated_data[0]
+        
+        for i in range(1,len(self.freqs)):
+            
+            total[i] = total[i-1] + self.magnitude[i]
+            total1[i] = total1[i-1] + generated_data[i]
+            
+        renormalisation = sum(total)/sum(total1)
+         
+        total1 = total1*renormalisation
+        
+        error = sum(((total - total1)/self.freqs**2)**2)
+        #print(error)
+        return error
+    
+    def fft_fit(self, guess, data, a, b):
+
+        unused, unused1 = self.fourier_transform(data)
+        blank_array = np.ones(len(self.magnitude))
+        background = sum(self.magnitude[int(len(self.magnitude)*0.2):])/(len(self.magnitude)*(1-0.2))
+        self.magnitude = self.magnitude - background*blank_array
+        fit = scipy.optimize.minimize(self.fft_error,guess)
+        print("error is " + str(fit.fun))
+        guess = fit.x
+        gamma = guess[0] 
+        omega = guess[1]
+    
+        omega_array = omega*blank_array.copy()
+        gamma_array = gamma*gamma*blank_array.copy()
+        
+        generated_data = gamma*(1/(gamma_array + (self.freqs - omega_array)**2)) + gamma*(1/(gamma_array + (self.freqs + omega_array)**2))
+        print(guess)
+        print("period is " + str(abs(0.2*(1)/omega)))
+        total = np.ones(len(self.freqs))
+        total1 = np.ones(len(self.freqs))
+        
+        total[0] = self.magnitude[0]
+        total1[0] = generated_data[0]
+        
+        for i in range(1,len(self.freqs)):
+            
+            total[i] = total[i-1] + self.magnitude[i]
+            total1[i] = total1[i-1] + generated_data[i]
+        renormalisation1 = sum(self.magnitude)/sum(generated_data) 
+        renormalisation2 = sum(total)/sum(total1)
+         
+        total1 = total1*renormalisation2
+        generated_data = generated_data*renormalisation1
+        return abs(0.2*(1)/omega)
+        #fig = plt.figure()
+        #plt.plot(self.freqs, generated_data)
+        #plt.plot(self.freqs, self.magnitude, linestyle='--')
+        #plt.show()
+        
+        #fig = plt.figure()
+        #plt.plot(self.freqs, total)
+        #plt.plot(self.freqs, total1, 'k')
+        #plt.show()
+
 def scipy_mediator(guess, other_data):  
     error = data_analysis(other_data[0], other_data[1], other_data[2], guess, other_data[3], other_data[4], other_data[5], other_data[6])
     return error.likihood()
@@ -466,6 +600,7 @@ def main(itterations, recovery_rate, resuseptibility_rate, varience_in_noise):
     #print("the recovery rate is " + str(recovery_rate))
     #print("the immunity loss rate is " + str(resuseptibility_rate))
     #print("the varience in the noise is " + str(resuseptibility_rate))
+    
     population = 1
     infection_rate = 1/(population)
     time_step = 0.1
@@ -478,19 +613,11 @@ def main(itterations, recovery_rate, resuseptibility_rate, varience_in_noise):
     infected =  infected_number*infected
     recovered = recovered_number*recovered
     suseptible = suseptible_number*suseptible
-    #pred_freq = (resuseptibility_rate*(1 + resuseptibility_rate)/(recovery_rate + resuseptibility_rate))**2 - 4*resuseptibility_rate*(1 - recovery_rate)
-    #if pred_freq < 0:
-    #    print(pred_freq)
-    #    pred_period = 2*math.pi/((abs(pred_freq)**0.5)/2)
-        #print("the predicted period is " + str(pred_period))
-    #    if pred_period < 50:
-    #        itterations = 2*int(itterations*pred_period)
-    #    else:
-    #        itterations = int(itterations*pred_period)
-            #print("itterations:" + str(itterations))
-    #else: 
-        #print("no predicted frequency")
-     #   pred_period = 100
+    square = ((resuseptibility_rate*( 1+resuseptibility_rate)/(resuseptibility_rate + recovery_rate))**2) - 4*resuseptibility_rate*(1 - recovery_rate)
+    
+    
+    if square < 0:
+        print("pred period is " + str(4*3.14/(abs(square)**0.5)))
     #pred_period= itterations
     #x = np.zeros(itterations)
     #y = np.zeros(itterations)
@@ -517,7 +644,7 @@ def main(itterations, recovery_rate, resuseptibility_rate, varience_in_noise):
     average_energy.append(0)
     for i in range(1,len(energy)):
         average_energy.append(0.5*time_step*energy[i]/i + average_energy[i-1]*(i-1)/i)
-   
+    omega = data_analysis(1, 1, 1, 1, 1, 1, 1, 1).fft_fit([1,1], base_infected, square,1)
     #plt.plot(time,average_energy)
     #plt.plot(time,gaussian_filter1d(energy,100))
     #plt.plot(time,gaussian_filter1d(base_infected[1:],100))
@@ -526,19 +653,19 @@ def main(itterations, recovery_rate, resuseptibility_rate, varience_in_noise):
     #print(period)
     #period = data_analysis(1, 1, 1, 1, 1, 1, 1, 1).period_finder(gaussian_filter1d(base_recovered,0.17*pred_period/time_step), time_step, pred_period)
     #print(period)
-    fig, ax = plt.subplots()
+    #fig, ax = plt.subplots()
     #plt.plot(time,base_infected[1:]/population)
-    plt.plot(time,average_energy,label = 'Average Kinetic Energy ')
-    plt.plot(time,0.5*time_step*energy,linestyle='--', label = 'Kinetic Energy ')
-    txt = ax.text(0.02, 0.95, 'a = 0.5', transform=ax.transAxes, 
-          ha='left', va='top', fontsize=10, color='black')
-    txt = ax.text(0.02, 0.90, 'b = 0.3', transform=ax.transAxes, 
-          ha='left', va='top', fontsize=10, color='black')
-    txt = ax.text(0.02, 0.85, '$\sigma^2$ = 0.25', transform=ax.transAxes, 
-          ha='left', va='top', fontsize=10, color='black')
-    plt.legend()
-    plt.show()
-    return sum(energy)/(len(energy))#average_energy[len(average_energy) - 1]/time_step #100*abs(period - pred_period)/period
+    #plt.plot(time,average_energy,label = 'Average Kinetic Energy ')
+    #plt.plot(time,0.5*time_step*energy,linestyle='--', label = 'Kinetic Energy ')
+    #txt = ax.text(0.02, 0.95, 'a = 0.5', transform=ax.transAxes, 
+    #      ha='left', va='top', fontsize=10, color='black')
+    #txt = ax.text(0.02, 0.90, 'b = 0.3', transform=ax.transAxes, 
+    #      ha='left', va='top', fontsize=10, color='black')
+    #txt = ax.text(0.02, 0.85, '$\sigma^2$ = 0.25', transform=ax.transAxes, 
+    #      ha='left', va='top', fontsize=10, color='black')
+    #plt.legend()
+    #plt.show()
+    return omega#average_energy[len(average_energy) - 1]/time_step #100*abs(period - pred_period)/period
     
     #maximum = np.zeros(int(itterations/5000 - 1))
     #minimum = np.zeros(int(itterations/5000 - 1))
@@ -645,8 +772,15 @@ def main(itterations, recovery_rate, resuseptibility_rate, varience_in_noise):
 #data_analysis(1, 1, 1, 1, 1, 1, 1, 1).colour_pdf(S[1:], I[1:], 500)
 #[np.min(S),np.max(S)],[np.min(I),np.max(I)]
 start = tn.time()
-print(main(200000,0.5,0.003, 0.5))
-#data_analysis(1, 1, 1, 1, 1, 1, 1, 1).freq_pred(200)
-#data_analysis(1, 1, 1, 1, 1, 1, 1, 1).varience_effect_plotter()
-print(str(tn.time() - start))
+ticker = 0
+count = 0
+for i in range(20):
+    omega = main(10000,0.5,0.002, 0.000003)
+    if omega < 300:
+        print(omega)
+        count += omega
+        ticker +=1
+print("average is" + str(count/ticker))
+#data_analysis(1, 1, 1, 1, 1, 1, 1, 1).freq_pred(1000)
+#
  
